@@ -5,49 +5,97 @@ import useWebSocket, {ReadyState} from "react-use-websocket";
 import {WS_ROOT} from "../constants.ts"
 import {useEffect, useState} from "react";
 import useAuthStore from "../store";
-import {useNavigate} from "react-router-dom";
 import {AnimatePresence, motion} from "framer-motion";
 import {WebSocketMessage} from "@/types";
 
 interface UserInPlace {
+  id: number,
   name: string
   surname: string
-  competition: string
+  role: {
+    id: number
+    name: string
+  }
+  competition: {
+    id: number
+    name: string
+  } | null
+}
+
+interface CompetitionState {
+  id: number
+  title: string
+  type: string
 }
 
 const RegistrationView = () => {
-  const navigate = useNavigate()
-  const [isError, setError] = useState<boolean>(false)
-
   const [users, setUsers] = useState<UserInPlace[]>([])
+  const [userCount, setUserCount] = useState<number>(0)
 
   const token = useAuthStore(state => state.token)
   const id = useAuthStore(state => state.id)
 
   const [connectionState, setConnectionState] = useState<string>("")
-  const {lastJsonMessage, readyState} = useWebSocket<WebSocketMessage | null>(`${WS_ROOT}/connect_stand?token=${token}&id=${id}&type=registration`, {
-    onError: () => {
-      setError(true)
+  const [competitionState, setCompetitionState] = useState<CompetitionState | undefined>(undefined)
+
+  const {lastJsonMessage, readyState, sendJsonMessage} = useWebSocket<WebSocketMessage | null>(`${WS_ROOT}/connect_stand?token=${token}&id=${id}&type=registration`, {
+    reconnectAttempts: 5,
+    shouldReconnect: () => true,
+    onOpen: () => {
+      sendJsonMessage({
+        "event": "USERS:GET_COUNT",
+        "data": null
+      })
+
+      sendJsonMessage({
+        "event": "USERS:GET_IN_PLACE",
+        "data": null
+      })
     }
   })
 
   useEffect(() => {
     if (lastJsonMessage === null) return
+    console.log(lastJsonMessage)
 
     switch (lastJsonMessage.event) {
-      case "NEW_USER_IN_PLACE":
+      case "USERS:NEW_IN_PLACE":
         setUsers(prev => ([...prev, {
+          id: lastJsonMessage.data.id,
           name: lastJsonMessage.data.name,
           surname: lastJsonMessage.data.surname,
-          competition: lastJsonMessage.data.competition
+          role: {
+            id: lastJsonMessage.data.role.id,
+            name: lastJsonMessage.data.role.name
+          },
+          competition: lastJsonMessage.data.competition && {
+            id: lastJsonMessage.data.competition.id,
+            name: lastJsonMessage.data.competition.title
+          }
         }]))
+        break
+
+      case "USERS:GET_COUNT:RESULT":
+        setUserCount(lastJsonMessage.data.count)
+        break
+
+      case "USERS:COUNT_UPDATE":
+        setUserCount(lastJsonMessage.data.count)
+        break
+
+      case "USERS:GET_IN_PLACE:RESULT":
+        setUsers(lastJsonMessage.data.users)
+        break
+
+      case "COMPETITIONS:STATE_CHANGE":
+        setCompetitionState(lastJsonMessage.data.state)
     }
   }, [lastJsonMessage])
 
   useEffect(() => {
     switch (readyState) {
       case ReadyState.CONNECTING:
-        setConnectionState("Идет подключение к серверу...")
+        setConnectionState("Идет подключение к серверу")
         break
 
       case ReadyState.OPEN:
@@ -56,27 +104,13 @@ const RegistrationView = () => {
 
       case ReadyState.CLOSED:
         setConnectionState("Соединение разорвано")
+        break
     }
 
   }, [readyState])
 
   return (
     <>
-      {isError && (
-        <div className="z-50 flex justify-center items-center absolute w-full h-screen">
-          <div className="z-0 absolute w-full h-screen bg-neutral-600 opacity-50"></div>
-          <div
-            onClick={() => {
-              navigate("/")
-            }}
-            className="z-50 p-10 bg-white text-black cursor-pointer"
-          >
-            <p className="text-xl font-medium">Во время подключения к серверу произошла ошибка</p>
-            <p>Проверьте данные подключения</p>
-          </div>
-        </div>
-      )}
-
       <div className="relative gap-32 w-full h-screen flex p-12">
         <DotPattern className="fill-neutral-300 z-0"/>
 
@@ -92,13 +126,29 @@ const RegistrationView = () => {
                 text="Добро пожаловать на олимпиаду!"
               />
               <div className="flex mt-6 items-center gap-2">
-                <div className="relative flex justify-center items-center">
-                  <span className="block animate-ping rounded-full w-4 h-4 bg-green-400 absolute"></span>
-                  <span className="block rounded-full w-2 h-2 bg-green-400"></span>
-                </div>
+                {connectionState === "Соединение разорвано" && (
+                  <div className="relative flex justify-center items-center">
+                    <span className="block rounded-full w-2 h-2 bg-red-500"></span>
+                  </div>
+                )}
+                {connectionState === "Идет подключение к серверу" && (
+                  <div className="relative flex justify-center items-center">
+                    <span className="block rounded-full w-2 h-2 bg-orange-500"></span>
+                  </div>
+                )}
+                {connectionState === "Подключено к серверу" && (
+                  <div className="relative flex justify-center items-center">
+                    <span className="block animate-ping rounded-full w-4 h-4 bg-green-400 absolute"></span>
+                    <span className="block rounded-full w-2 h-2 bg-green-400"></span>
+                  </div>
+                )}
                 <p>{connectionState}</p>
               </div>
             </div>
+
+            {competitionState && (
+              <p className="text-2xl bg-orange-500 text-white w-fit px-3 py-1 mt-4 font-bold">{competitionState.title}</p>
+            )}
           </div>
 
           <div>
@@ -113,7 +163,7 @@ const RegistrationView = () => {
 
             <p className="text-8xl font-bold">
               <span className="text-green-500">{users.length}</span>
-              <span className="text-neutral-400">/30</span>
+              <span className="text-neutral-400">/{userCount}</span>
             </p>
           </div>
         </div>
@@ -138,17 +188,23 @@ const RegistrationView = () => {
                     height: 0
                   }}
                   animate={{
-                    height: 72,
+                    height: 100,
                   }}
                 >
+                  <HyperText
+                    className="text-lg font-bold text-neutral-500"
+                    text={user.role.name}
+                  />
                   <HyperText
                     className="text-4xl font-bold"
                     text={`${user.surname} ${user.name}`}
                   />
-                  <HyperText
-                    className="text-2xl font-bold text-neutral-500"
-                    text={user.competition}
-                  />
+                  {user.competition && (
+                    <HyperText
+                      className="text-2xl font-bold text-neutral-500"
+                      text={user.competition.name}
+                    />
+                  )}
                 </motion.li>
               ))}
             </AnimatePresence>
