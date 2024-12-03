@@ -2,11 +2,11 @@ import HyperText from "../components/ui/hyper-text.tsx";
 import Globe from "../components/ui/globe.tsx";
 import DotPattern from "../components/ui/dot-pattern.tsx";
 import useWebSocket, {ReadyState} from "react-use-websocket";
-import {WS_ROOT} from "../constants.ts"
 import {useEffect, useState} from "react";
 import useAuthStore from "../store";
 import {AnimatePresence, motion} from "framer-motion";
 import {WebSocketMessage} from "@/types";
+import {WS_ROOT} from "@/config/constants.ts";
 
 interface UserInPlace {
   id: number,
