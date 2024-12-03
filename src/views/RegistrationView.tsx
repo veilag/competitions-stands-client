@@ -70,7 +70,7 @@ const RegistrationView = () => {
           },
           competition: lastJsonMessage.data.competition && {
             id: lastJsonMessage.data.competition.id,
-            name: lastJsonMessage.data.competition.title
+            name: lastJsonMessage.data.competition.name
           }
         }]))
         break
