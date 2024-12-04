@@ -56,8 +56,8 @@ const AuthView = () => {
 
         <div>
           <div>
-            <Label htmlFor="token">Токен авторизации</Label>
-            <Input type="password" value={token} onChange={e => setToken(e.target.value)} id="token"/>
+            <Label htmlFor="key">Ключ</Label>
+            <Input type="password" value={token} onChange={e => setToken(e.target.value)} id="key"/>
           </div>
 
           <div className="mt-3">
@@ -70,7 +70,6 @@ const AuthView = () => {
               <SelectContent>
                 <SelectGroup>
                   <SelectItem value="registration">Регистрационный</SelectItem>
-                  <SelectItem value="interactive">Интерактивный с GPT</SelectItem>
                   <SelectItem value="awarding">Розыгрыш</SelectItem>
                 </SelectGroup>
               </SelectContent>
@@ -78,11 +77,11 @@ const AuthView = () => {
           </div>
 
           <div className="mt-3">
-            <Label htmlFor="id">Уникальный ID</Label>
+            <Label htmlFor="id">Идентификатор</Label>
             <Input value={id} onChange={e => setId(e.target.value)} id="id"/>
           </div>
 
-          <Button onClick={onClick} className="w-full mt-3">Авторизовать</Button>
+          <Button onClick={onClick} className="w-full mt-3">Включить</Button>
         </div>
       </div>
     </div>

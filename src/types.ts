@@ -40,11 +40,21 @@ type WebSocketMessage =
       data: {
         state: {
           id: number
-          title: string
+          name: string
           type: string
         }
       }
     }
+  | {
+      event: "COMPETITIONS:GET_STATE:RESULT"
+      data: {
+        state: {
+          id: number
+          name: string
+          type: string
+        }
+      }
+  }
 
 export type {
   WebSocketMessage

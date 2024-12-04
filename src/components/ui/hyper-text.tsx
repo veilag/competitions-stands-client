@@ -1,84 +1,69 @@
-"use client";
-
-import { AnimatePresence, motion, Variants } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
-
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef, useState, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
 interface HyperTextProps {
   text: string;
   duration?: number;
-  framerProps?: Variants;
   className?: string;
   animateOnLoad?: boolean;
+  onAnimationEnd?: () => void;
 }
 
-const alphabets = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const alphabets = "АБВГДЕËЖЗИЙКЛМНОПРСТИФХЦЧШЩЬЪЭЮЯ".split("");
 
 const getRandomInt = (max: number) => Math.floor(Math.random() * max);
 
-export default function HyperText({
-  text,
-  duration = 800,
-  framerProps = {
-    initial: { opacity: 0, y: -10 },
-    animate: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: 3 },
-  },
-  className,
-  animateOnLoad = true,
-}: HyperTextProps) {
+const HyperText = forwardRef(function HyperText(
+  {
+    text,
+    duration = 800,
+    className,
+    onAnimationEnd,
+  }: HyperTextProps
+) {
   const [displayText, setDisplayText] = useState(text.split(""));
-  const [trigger, setTrigger] = useState(false);
   const interations = useRef(0);
-  const isFirstRender = useRef(true);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const triggerAnimation = () => {
+  const startAnimation = () => {
     interations.current = 0;
-    setTrigger(true);
+    clearInterval(intervalRef.current!); // Clear any ongoing interval
+    intervalRef.current = setInterval(() => {
+      if (interations.current < text.length) {
+        setDisplayText((t) =>
+          t.map((l, i) =>
+            l === " "
+              ? l
+              : i <= interations.current
+                ? text[i]
+                : alphabets[getRandomInt(26)]
+          )
+        );
+        interations.current += 0.1;
+      } else {
+        clearInterval(intervalRef.current!);
+        if (onAnimationEnd) onAnimationEnd();
+      }
+    }, duration / (text.length * 10));
   };
 
   useEffect(() => {
-    const interval = setInterval(
-      () => {
-        if (!animateOnLoad && isFirstRender.current) {
-          clearInterval(interval);
-          isFirstRender.current = false;
-          return;
-        }
-        if (interations.current < text.length) {
-          setDisplayText((t) =>
-            t.map((l, i) =>
-              l === " "
-                ? l
-                : i <= interations.current
-                  ? text[i]
-                  : alphabets[getRandomInt(26)]
-            )
-          );
-          interations.current = interations.current + 0.1;
-        } else {
-          setTrigger(false);
-          clearInterval(interval);
-        }
-      },
-      duration / (text.length * 10)
-    );
-    // Clean up interval on unmount
-    return () => clearInterval(interval);
-  }, [text, duration, trigger, animateOnLoad]);
+    setDisplayText(text.split(""));
+    startAnimation();
+    return () => clearInterval(intervalRef.current!);
+  }, [text]);
 
   return (
-    <div
-      className="flex scale-100 cursor-default overflow-hidden"
-      onMouseEnter={triggerAnimation}
-    >
+    <div className="flex scale-100 cursor-default overflow-hidden">
       <AnimatePresence>
-        {displayText.map((letter, i) => (
+        {displayText.map((letter, index) => (
           <motion.span
-            key={i}
+            key={index}
             className={cn("font-mono", letter === " " ? "w-3" : "", className)}
-            {...framerProps}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 3 }}
           >
             {letter.toUpperCase()}
           </motion.span>
@@ -86,4 +71,6 @@ export default function HyperText({
       </AnimatePresence>
     </div>
   );
-}
+});
+
+export default HyperText

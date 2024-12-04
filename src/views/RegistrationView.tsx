@@ -24,7 +24,7 @@ interface UserInPlace {
 
 interface CompetitionState {
   id: number
-  title: string
+  name: string
   type: string
 }
 
@@ -51,12 +51,26 @@ const RegistrationView = () => {
         "event": "USERS:GET_IN_PLACE",
         "data": null
       })
+
+      sendJsonMessage({
+        event: "COMPETITIONS:GET_STATE",
+        data: null
+      })
     }
   })
 
+  const color =
+    (competitionState?.type === "registration" && "bg-blue-500") ||
+    (competitionState?.type === "task_solving" && "bg-green-500") ||
+    (competitionState?.type === "start" && "bg-neutral-500") ||
+    (competitionState?.type === "awarding" && "bg-red-500") ||
+    (competitionState?.type === "checking" && "bg-yellow-500") ||
+    (competitionState?.type === "end" && "bg-neutral-500") ||
+    ((competitionState?.type === "lunch" || competitionState?.type === "breakfast" || competitionState?.type === "dinner") && "bg-orange-500") ||
+    undefined
+
   useEffect(() => {
     if (lastJsonMessage === null) return
-    console.log(lastJsonMessage)
 
     switch (lastJsonMessage.event) {
       case "USERS:NEW_IN_PLACE":
@@ -88,6 +102,10 @@ const RegistrationView = () => {
         break
 
       case "COMPETITIONS:STATE_CHANGE":
+        setCompetitionState(lastJsonMessage.data.state)
+        break
+
+      case "COMPETITIONS:GET_STATE:RESULT":
         setCompetitionState(lastJsonMessage.data.state)
     }
   }, [lastJsonMessage])
@@ -147,21 +165,26 @@ const RegistrationView = () => {
             </div>
 
             {competitionState && (
-              <p className="text-2xl bg-orange-500 text-white w-fit px-3 py-1 mt-4 font-bold">{competitionState.title}</p>
+              <div className={`text-2xl ${color} text-white w-fit px-3 py-1 mt-4 font-bold`}>
+                <HyperText
+                  className="text-2xl font-medium"
+                  text={competitionState.name}
+                />
+              </div>
             )}
           </div>
 
           <div>
             <HyperText
-              className="text-2xl font-bold"
+              className="text-3xl font-bold"
               text="Участников пришло"
             />
             <HyperText
-              className="text-xl mb-4 font-bold"
+              className="text-2xl mb-4 font-medium"
               text="Покажите QR-код у входа"
             />
 
-            <p className="text-8xl font-bold">
+            <p className="text-9xl font-bold">
               <span className="text-green-500">{users.length}</span>
               <span className="text-neutral-400">/{userCount}</span>
             </p>
@@ -170,7 +193,7 @@ const RegistrationView = () => {
 
         <div className="z-10">
           {users.length !== 0 && (
-            <div className="p-4 bg-black text-white w-fit mb-7">
+            <div className="px-4 py-3 bg-black text-white w-fit mb-7">
               <HyperText
                 className="text-2xl font-bold"
                 text="Приветствуем"
@@ -192,7 +215,7 @@ const RegistrationView = () => {
                   }}
                 >
                   <HyperText
-                    className="text-lg font-bold text-neutral-500"
+                    className="text-lg font-bold text-neutral-400"
                     text={user.role.name}
                   />
                   <HyperText
