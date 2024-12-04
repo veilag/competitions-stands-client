@@ -211,7 +211,7 @@ const RegistrationView = () => {
                     height: 0
                   }}
                   animate={{
-                    height: 100,
+                    height: user.competition ? 100 : 72,
                   }}
                 >
                   <HyperText
